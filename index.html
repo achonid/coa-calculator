@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crystal of Atlan — Damage Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg-primary:#0a0d14;--bg-card:#111827;--bg-input:#0d1117;--border:#1e293b;--border-focus:#3b82f6;--text-primary:#e2e8f0;--text-secondary:#94a3b8;--text-muted:#64748b;--accent-blue:#3b82f6;--accent-cyan:#22d3ee;--positive:#34d399;--negative:#f87171;--accent-amber:#fbbf24;--accent-red:#f87171;--bg-output:#0f1a2e}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg-primary);color:var(--text-primary);font-family:'Chakra Petch',sans-serif;min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 20% 0%,rgba(34,211,238,.04) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(59,130,246,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
+  .container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 4rem;position:relative;z-index:1}
+  header{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+  header h1{font-size:1.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+  header p{font-size:.78rem;color:var(--text-muted);letter-spacing:.04em}
+  .results-banner{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;position:sticky;top:.5rem;z-index:100;backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+  .result-item{text-align:center}
+  .result-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:.3rem}
+  .result-value{font-family:'IBM Plex Mono',monospace;font-size:1.3rem;font-weight:500}
+  .result-value.base{color:var(--text-secondary)}.result-value.modified{color:var(--accent-cyan)}.result-value.change{font-size:1.1rem}.result-value.change.positive{color:var(--positive)}.result-value.change.negative{color:var(--negative)}.result-value.change.neutral{color:var(--text-muted)}
+  .bucket-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:768px){.bucket-grid{grid-template-columns:1fr}.results-banner{grid-template-columns:1fr;gap:.5rem}.fields-grid.triple{grid-template-columns:1fr 1fr!important}}
+  .bucket-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;transition:border-color .2s}
+  .bucket-card:hover{border-color:rgba(59,130,246,.3)}.bucket-card.full-width{grid-column:1/-1}
+  .bucket-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+  .bucket-number{width:22px;height:22px;border-radius:5px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;color:var(--accent-blue);flex-shrink:0}
+  .bucket-title{font-size:.82rem;font-weight:600;color:var(--text-primary);letter-spacing:.02em}
+  .bucket-formula{font-size:.65rem;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;margin-bottom:.75rem;padding:.4rem .6rem;background:rgba(0,0,0,.25);border-radius:4px;line-height:1.5}
+  .fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .75rem}.fields-grid.triple{grid-template-columns:1fr 1fr 1fr}
+  .field-group{display:flex;flex-direction:column;gap:.2rem}
+  .field-label{font-size:.62rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+  .field-row{display:flex;gap:.35rem;align-items:center}
+  input[type="number"]{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:5px;padding:.4rem .5rem;color:var(--text-primary);font-family:'IBM Plex Mono',monospace;font-size:.78rem;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+  input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type="number"]:focus{border-color:var(--border-focus)}
+  input.increase-input{border-color:rgba(34,211,238,.2);background:rgba(34,211,238,.04)}
+  input.increase-input:focus{border-color:var(--accent-cyan)}
+  .field-unit{font-size:.65rem;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap;min-width:1.2rem}
+  .bucket-result{margin-top:.6rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.04);display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:.72rem}
+  .bucket-result-label{color:var(--text-muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em}
+  .bucket-result-values{display:flex;gap:.75rem;align-items:center}
+  .bucket-base-val{color:var(--text-secondary)}.bucket-mod-val{color:var(--accent-cyan)}
+  .bucket-diff{font-size:.68rem}.bucket-diff.positive{color:var(--positive)}.bucket-diff.negative{color:var(--negative)}.bucket-diff.neutral{color:var(--text-muted)}
+  .toggle-row{display:flex;align-items:center;gap:.5rem;margin-top:.5rem}
+  .toggle-label{font-size:.65rem;color:var(--text-muted)}
+  .toggle{width:36px;height:20px;border-radius:10px;background:var(--border);position:relative;cursor:pointer;transition:background .2s}
+  .toggle.active{background:var(--accent-blue)}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text-primary);transition:transform .2s}
+  .toggle.active::after{transform:translateX(16px)}
+  .note-text{font-size:.6rem;color:var(--text-muted);margin-top:.35rem;line-height:1.4}
+  .note-text.warning{color:var(--accent-amber);font-weight:500}
+  .reset-btn{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--accent-red);padding:.35rem .75rem;border-radius:5px;font-family:'Chakra Petch',sans-serif;font-size:.7rem;cursor:pointer;letter-spacing:.04em;transition:all .2s}
+  .reset-btn:hover{background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.4)}
+  .header-actions{display:flex;justify-content:center;gap:.75rem;margin-top:.75rem}
+  .exclusive-badge{display:inline-block;font-size:.55rem;padding:.1rem .35rem;border-radius:3px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);color:var(--accent-amber);text-transform:uppercase;letter-spacing:.06em;font-weight:600;vertical-align:middle;margin-left:.25rem}
+  /* Output fields */
+  .output-field{width:100%;background:var(--bg-output);border:1px solid rgba(59,130,246,.15);border-radius:5px;padding:.4rem .5rem;color:var(--accent-cyan);font-family:'IBM Plex Mono',monospace;font-size:.78rem;cursor:default;user-select:all}
+  /* ATK breakdown outputs */
+  .atk-outputs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem .75rem;margin-top:.75rem;padding-top:.6rem;border-top:1px solid rgba(255,255,255,.06)}
+  .atk-output-group{display:flex;flex-direction:column;gap:.2rem}
+  .atk-output-label{font-size:.58rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+  .atk-output-row{display:flex;gap:.35rem;align-items:center}
+  .atk-output-val{font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:.3rem .45rem;border-radius:4px;background:var(--bg-output);border:1px solid rgba(59,130,246,.12);color:var(--text-secondary);flex:1;text-align:center}
+  .atk-output-val.mod{color:var(--accent-cyan);border-color:rgba(34,211,238,.15)}
+  .atk-arrow{color:var(--text-muted);font-size:.65rem}
+  /* Conditional tag */
+  .conditional-badge{display:inline-block;font-size:.55rem;padding:.1rem .35rem;border-radius:3px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:#a78bfa;text-transform:uppercase;letter-spacing:.06em;font-weight:600;vertical-align:middle;margin-left:.25rem}
+  #bucket10card .bucket-header{font-family:'IBM Plex Mono',monospace;font-size:.72rem}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1 style="font-size:2.2rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.2rem;line-height:1.2">
+      <span style="background:linear-gradient(135deg,#22d3ee 0%,#3b82f6 40%,#a78bfa 70%,#e879f9 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(59,130,246,.15))">Crystal of Atlan</span>
+    </h1>
+    <p style="font-size:1.15rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--text-primary);margin-bottom:.1rem">— Damage Calculator —</p>
+    <div style="width:80px;height:2px;background:linear-gradient(90deg,transparent,var(--accent-cyan),var(--accent-blue),transparent);margin:.5rem auto .7rem"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem">
+      <p style="font-size:.72rem;color:var(--text-secondary);letter-spacing:.04em;">Made by achonid — if this tool helped you, consider supporting</p>
+      <a href="https://buymeacoffee.com/achonid" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:var(--accent-amber);padding:.3rem .65rem;border-radius:6px;font-family:'Chakra Petch',sans-serif;font-size:.65rem;text-decoration:none;letter-spacing:.03em;transition:all .2s" onmouseover="this.style.background='rgba(251,191,36,.2)';this.style.borderColor='rgba(251,191,36,.4)'" onmouseout="this.style.background='rgba(251,191,36,.1)';this.style.borderColor='rgba(251,191,36,.25)'">⚔️ Buy me a +24</a>
+    </div>
+  </header>
+  <div class="results-banner">
+    <div class="result-item"><div class="result-label">Base Damage</div><div class="result-value base" id="baseDmg">0</div></div>
+    <div class="result-item"><div class="result-label">Modified Damage</div><div class="result-value modified" id="modDmg">0</div></div>
+    <div class="result-item"><div class="result-label">Change</div><div class="result-value change neutral" id="changePct">0.00%</div></div>
+  </div>
+  <div class="header-actions" style="margin-bottom:1.5rem">
+    <button class="reset-btn" onclick="resetAll()">Reset All Increases</button>
+    <button class="reset-btn" onclick="resetEverything()">Reset Everything</button>
+  </div>
+  <div class="bucket-grid">
+
+    <!-- 1 Actual ATK -->
+    <div class="bucket-card full-width">
+      <div class="bucket-header"><div class="bucket-number">1</div><div class="bucket-title">Actual ATK</div></div>
+      <div class="bucket-formula">Total PATK = PATK × (1 + STR÷10%) × (1 + PATK%)<br>DR = 3500 ÷ (3500 + PDEF × (1−PEN%))<br>Actual ATK = Total PATK × DR + PDEF Shred</div>
+      <div class="fields-grid triple">
+        <div class="field-group"><div class="field-label">PATK (flat)</div><div class="field-row"><input type="number" id="patk_base" value="1750" oninput="calc()"><input type="number" class="increase-input" id="patk_inc" oninput="calc()"><span class="field-unit" style="visibility:hidden">%</span></div></div>
+        <div class="field-group"><div class="field-label">STR</div><div class="field-row"><input type="number" id="str_base" value="10000" oninput="calc()"><input type="number" class="increase-input" id="str_inc" oninput="calc()"><span class="field-unit" style="visibility:hidden">%</span></div></div>
+        <div class="field-group"><div class="field-label">PATK%</div><div class="field-row"><input type="number" id="patkpct_base" value="30" oninput="calc()"><input type="number" class="increase-input" id="patkpct_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">Enemy PDEF</div><div class="field-row"><input type="number" id="pdef_base" value="5000" oninput="calc()"><input type="number" class="increase-input" id="pdef_inc" oninput="calc()"><span class="field-unit" style="visibility:hidden">%</span></div></div>
+        <div class="field-group"><div class="field-label">PEN%</div><div class="field-row"><input type="number" id="pen_base" value="30" oninput="calc()"><input type="number" class="increase-input" id="pen_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">PDEF Shred</div><div class="field-row"><input type="number" id="shred_base" value="7000" oninput="calc()"><input type="number" class="increase-input" id="shred_inc" oninput="calc()"><span class="field-unit" style="visibility:hidden">%</span></div></div>
+      </div>
+      <div class="atk-outputs">
+        <div class="atk-output-group">
+          <div class="atk-output-label">Total PATK</div>
+          <div class="atk-output-row"><div class="atk-output-val" id="totalpatk_base">—</div><span class="atk-arrow">→</span><div class="atk-output-val mod" id="totalpatk_mod">—</div></div>
+        </div>
+        <div class="atk-output-group">
+          <div class="atk-output-label">DR Multiplier</div>
+          <div class="atk-output-row"><div class="atk-output-val" id="dr_base">—</div><span class="atk-arrow">→</span><div class="atk-output-val mod" id="dr_mod">—</div></div>
+        </div>
+        <div class="atk-output-group">
+          <div class="atk-output-label">Actual ATK</div>
+          <div class="atk-output-row"><div class="atk-output-val" id="actualatk_base">—</div><span class="atk-arrow">→</span><div class="atk-output-val mod" id="actualatk_mod">—</div></div>
+        </div>
+      </div>
+      <div class="bucket-result"><span class="bucket-result-label">Bucket Value</span><div class="bucket-result-values"><span class="bucket-base-val" id="b1_base">—</span><span>→</span><span class="bucket-mod-val" id="b1_mod">—</span><span class="bucket-diff neutral" id="b1_diff">—</span></div></div>
+    </div>
+
+    <!-- 2 Skill Multiplier -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">2</div><div class="bucket-title">Skill Multiplier</div></div>
+      <div class="bucket-formula">= Skill Page% × (1 + Skill Mult% sources)</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">Skill Page %</div><div class="field-row"><input type="number" id="skillpage_base" value="100" oninput="calc()"><input type="number" class="increase-input" id="skillpage_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">Skill Mult Bonus %</div><div class="field-row"><input type="number" id="skillmult_base" oninput="calc()"><input type="number" class="increase-input" id="skillmult_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div class="bucket-result"><span class="bucket-result-label">Multiplier</span><div class="bucket-result-values"><span class="bucket-base-val" id="b2_base">—</span><span>→</span><span class="bucket-mod-val" id="b2_mod">—</span><span class="bucket-diff neutral" id="b2_diff">—</span></div></div>
+    </div>
+
+    <!-- 3 Crit DMG -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">3</div><div class="bucket-title">Crit DMG</div></div>
+      <div class="bucket-formula">= 1 + CDMG%</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">CDMG%</div><div class="field-row"><input type="number" id="cdmg_base" oninput="calc()"><input type="number" class="increase-input" id="cdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div class="bucket-result"><span class="bucket-result-label">Crit Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b3_base">—</span><span>→</span><span class="bucket-mod-val" id="b3_mod">—</span><span class="bucket-diff neutral" id="b3_diff">—</span></div></div>
+    </div>
+
+    <!-- 4 Elemental ENH -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">4</div><div class="bucket-title">Elemental ENH</div></div>
+      <div class="bucket-formula">= 1 + (Ele ENH − Ele RES) ÷ 2.2</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">Ele ENH</div><div class="field-row"><input type="number" id="eleENH_base" oninput="calc()"><input type="number" class="increase-input" id="eleENH_inc" oninput="calc()"></div></div>
+        <div class="field-group"><div class="field-label">Enemy Ele RES</div><div class="field-row"><input type="number" id="eleRES_base" oninput="calc()"><input type="number" class="increase-input" id="eleRES_inc" oninput="calc()"></div></div>
+      </div>
+      <div class="bucket-result"><span class="bucket-result-label">Ele Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b4_base">—</span><span>→</span><span class="bucket-mod-val" id="b4_mod">—</span><span class="bucket-diff neutral" id="b4_diff">—</span></div></div>
+    </div>
+
+    <!-- 5 Attribute DMG% -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">5</div><div class="bucket-title">Attribute DMG%</div></div>
+      <div class="bucket-formula">= 1 + Ele DMG% + All Attribute DMG%</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">Total Attribute DMG%</div><div class="field-row"><input type="number" id="attrdmg_base" oninput="calc()"><input type="number" class="increase-input" id="attrdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div class="bucket-result"><span class="bucket-result-label">Attr Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b5_base">—</span><span>→</span><span class="bucket-mod-val" id="b5_mod">—</span><span class="bucket-diff neutral" id="b5_diff">—</span></div></div>
+    </div>
+
+    <!-- 6 DMG Buff% -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">6</div><div class="bucket-title">DMG Buff%</div></div>
+      <div class="bucket-formula">= 1 + DMG Buff%</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">DMG Buff%</div><div class="field-row"><input type="number" id="dmgbuff_base" oninput="calc()"><input type="number" class="increase-input" id="dmgbuff_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div class="note-text warning">⚠ Includes class-specific damage buffs such as Swordsman Damage on Magiblade.</div>
+      <div class="bucket-result"><span class="bucket-result-label">Buff Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b6_base">—</span><span>→</span><span class="bucket-mod-val" id="b6_mod">—</span><span class="bucket-diff neutral" id="b6_diff">—</span></div></div>
+    </div>
+
+    <!-- 7 DMG Bonus -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">7</div><div class="bucket-title">DMG Bonus</div></div>
+      <div class="bucket-formula">= 1 + DMG Bonus%</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">DMG Bonus%</div><div class="field-row"><input type="number" id="dmgbonus_base" oninput="calc()"><input type="number" class="increase-input" id="dmgbonus_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div class="bucket-result"><span class="bucket-result-label">Bonus Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b7_base">—</span><span>→</span><span class="bucket-mod-val" id="b7_mod">—</span><span class="bucket-diff neutral" id="b7_diff">—</span></div></div>
+    </div>
+
+    <!-- 8 Skill DMG -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">8</div><div class="bucket-title">Skill DMG</div></div>
+      <div class="bucket-formula">= 1 + <span id="atkTypeLabel">Skill DMG%</span> + Aerial DMG% + Special Effect DMG% + Resonance DMG%</div>
+      <div class="fields-grid triple">
+        <div class="field-group"><div class="field-label">Skill DMG%</div><div class="field-row"><input type="number" id="skilldmg_base" oninput="calc()"><input type="number" class="increase-input" id="skilldmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">BATK DMG%</div><div class="field-row"><input type="number" id="batkdmg_base" oninput="calc()"><input type="number" class="increase-input" id="batkdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">Aerial DMG%</div><div class="field-row"><input type="number" id="aerialdmg_base" oninput="calc()"><input type="number" class="increase-input" id="aerialdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">Special Effect DMG%</div><div class="field-row"><input type="number" id="specialdmg_base" oninput="calc()"><input type="number" class="increase-input" id="specialdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">Resonance DMG%</div><div class="field-row"><input type="number" id="resdmg_base" oninput="calc()"><input type="number" class="increase-input" id="resdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div style="display:flex;gap:1.25rem;flex-wrap:wrap">
+        <div class="toggle-row"><div class="toggle" id="atkTypeToggle" onclick="toggleAtkType()"></div><div class="toggle-label" id="atkTypeToggleLabel" style="min-width:10rem">Using: Skill DMG%</div></div>
+        <div class="toggle-row"><div class="toggle" id="resonanceToggle" onclick="toggleResonance()"></div><div class="toggle-label">Resonance Active</div></div>
+      </div>
+      <div class="note-text warning">⚠ Skill DMG% and BATK DMG% are never added together — only one applies depending on the attack used.</div>
+      <div class="bucket-result"><span class="bucket-result-label">Skill Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b8_base">—</span><span>→</span><span class="bucket-mod-val" id="b8_mod">—</span><span class="bucket-diff neutral" id="b8_diff">—</span></div></div>
+    </div>
+
+    <!-- 9 Debuff/Type/Boss -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">9</div><div class="bucket-title">Debuff / Type / Boss DMG</div></div>
+      <div class="bucket-formula">= 1 + Boss% + Type% + all Debuff DMG% + Shield Break DMG%</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">DMG to Boss%</div><div class="field-row"><input type="number" id="bossdmg_base" oninput="calc()"><input type="number" class="increase-input" id="bossdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">DMG to Type%</div><div class="field-row"><input type="number" id="typedmg_base" oninput="calc()"><input type="number" class="increase-input" id="typedmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">DMG to Debuff%</div><div class="field-row"><input type="number" id="debuffdmg_base" oninput="calc()"><input type="number" class="increase-input" id="debuffdmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        <div class="field-group"><div class="field-label">Shield Break DMG%</div><div class="field-row"><input type="number" id="shieldbreak_base" oninput="calc()"><input type="number" class="increase-input" id="shieldbreak_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div class="toggle-row"><div class="toggle" id="shieldToggle" onclick="toggleShield()"></div><div class="toggle-label">Shield Break Active</div></div>
+      <div class="bucket-result"><span class="bucket-result-label">Counter Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b9_base">—</span><span>→</span><span class="bucket-mod-val" id="b9_mod">—</span><span class="bucket-diff neutral" id="b9_diff">—</span></div></div>
+    </div>
+
+
+    <!-- 10 Additional DMG -->
+    <div class="bucket-card">
+      <div class="bucket-header"><div class="bucket-number">10</div><div class="bucket-title">Additional DMG</div></div>
+      <div class="bucket-formula">= 1 + Additional DMG%</div>
+      <div class="fields-grid">
+        <div class="field-group"><div class="field-label">Additional DMG%</div><div class="field-row"><input type="number" id="additionaldmg_base" oninput="calc()"><input type="number" class="increase-input" id="additionaldmg_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+      </div>
+      <div class="bucket-result"><span class="bucket-result-label">Addl Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b11_base">—</span><span>→</span><span class="bucket-mod-val" id="b11_mod">—</span><span class="bucket-diff neutral" id="b11_diff">—</span></div></div>
+    </div>
+
+
+    <!-- 11 Stat Reduction (collapsible, at end) -->
+    <div class="bucket-card" id="bucket10card">
+      <div class="bucket-header" style="cursor:pointer" onclick="toggleBucket10()">
+        <div class="bucket-number">11</div>
+        <div class="bucket-title">Stat Reduction on Enemy</div>
+        <span id="b10toggle" style="margin-left:auto;font-size:.7rem;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;">▶ Show</span>
+      </div>
+      <div style="display:flex;gap:.75rem;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:.72rem;margin-top:.25rem">
+        <span class="bucket-base-val" id="b10_base_inline">×1.0000</span>
+        <span style="color:var(--text-muted);">→</span>
+        <span class="bucket-mod-val" id="b10_mod_inline">×1.0000</span>
+        <span class="bucket-diff neutral" id="b10_diff_inline">—</span>
+      </div>
+      <div id="bucket10content" style="display:none;">
+        <div class="bucket-formula" style="margin-top:.6rem">= (1+DEF Red%) × (1+(Ele RES Red÷2.2)%) × (1+DMG Resist Red%)</div>
+        <div class="fields-grid triple">
+          <div class="field-group"><div class="field-label">DEF Reduction%</div><div class="field-row"><input type="number" id="defred_base" oninput="calc()"><input type="number" class="increase-input" id="defred_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+          <div class="field-group"><div class="field-label">Ele RES Reduction</div><div class="field-row"><input type="number" id="eresred_base" oninput="calc()"><input type="number" class="increase-input" id="eresred_inc" oninput="calc()"></div></div>
+          <div class="field-group"><div class="field-label">DMG Resist Red%</div><div class="field-row"><input type="number" id="dmgresred_base" oninput="calc()"><input type="number" class="increase-input" id="dmgresred_inc" oninput="calc()"><span class="field-unit">%</span></div></div>
+        </div>
+        <div class="bucket-result"><span class="bucket-result-label">Reduction Mult</span><div class="bucket-result-values"><span class="bucket-base-val" id="b10_base">—</span><span>→</span><span class="bucket-mod-val" id="b10_mod">—</span><span class="bucket-diff neutral" id="b10_diff">—</span></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<script>
+let shieldBreakActive=false;
+let resonanceActive=false;
+let useBATK=false;
+let bucket10Open=false;
+function toggleShield(){shieldBreakActive=!shieldBreakActive;document.getElementById('shieldToggle').classList.toggle('active',shieldBreakActive);calc()}
+function toggleResonance(){resonanceActive=!resonanceActive;document.getElementById('resonanceToggle').classList.toggle('active',resonanceActive);calc()}
+function toggleAtkType(){useBATK=!useBATK;document.getElementById('atkTypeToggle').classList.toggle('active',useBATK);document.getElementById('atkTypeToggleLabel').textContent=useBATK?'Using: BATK DMG%':'Using: Skill DMG%';document.getElementById('atkTypeLabel').textContent=useBATK?'BATK DMG%':'Skill DMG%';calc()}
+function toggleBucket10(){bucket10Open=!bucket10Open;document.getElementById('bucket10content').style.display=bucket10Open?'block':'none';document.getElementById('b10toggle').textContent=bucket10Open?'▼ Hide':'▶ Show'}
+function v(id){return parseFloat(document.getElementById(id).value)||0}
+function clampMin(el,min){if(el.value!==''&&parseFloat(el.value)<min)el.value=min}
+function fmt(n){if(n===0)return'0';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(2)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';return n.toFixed(1)}
+function fmtMult(n){return'×'+n.toFixed(4)}
+function fmtPct(n){return(n*100).toFixed(2)+'%'}
+function updateBucketDisplay(id,base,mod){document.getElementById(id+'_base').textContent=fmtMult(base);document.getElementById(id+'_mod').textContent=fmtMult(mod);const diff=base!==0?(mod/base-1):0;const diffEl=document.getElementById(id+'_diff');if(Math.abs(diff)<0.00005){diffEl.textContent='—';diffEl.className='bucket-diff neutral'}else{diffEl.textContent=(diff>0?'+':'')+(diff*100).toFixed(2)+'%';diffEl.className='bucket-diff '+(diff>0?'positive':'negative')}}
+
+function calcATKparts(patk,str,patkpct,pdef,pen,shred){
+  const totalPATK=patk*(1+str/1000)*(1+patkpct/100);
+  const effectiveDef=pdef*(1-pen/100);
+  const dr=3500/(3500+effectiveDef);
+  const actualATK=totalPATK*dr+shred;
+  return{totalPATK,dr,actualATK};
+}
+
+function calc(){
+// Bucket 1
+const base1=calcATKparts(v('patk_base'),v('str_base'),v('patkpct_base'),v('pdef_base'),v('pen_base'),v('shred_base'));
+const mod1=calcATKparts(v('patk_base')+v('patk_inc'),v('str_base')+v('str_inc'),v('patkpct_base')+v('patkpct_inc'),v('pdef_base')+v('pdef_inc'),v('pen_base')+v('pen_inc'),v('shred_base')+v('shred_inc'));
+// Update ATK output fields
+document.getElementById('totalpatk_base').textContent=fmt(base1.totalPATK);
+document.getElementById('totalpatk_mod').textContent=fmt(mod1.totalPATK);
+document.getElementById('dr_base').textContent=fmtPct(base1.dr);
+document.getElementById('dr_mod').textContent=fmtPct(mod1.dr);
+document.getElementById('actualatk_base').textContent=fmt(base1.actualATK);
+document.getElementById('actualatk_mod').textContent=fmt(mod1.actualATK);
+const b1_base=base1.actualATK;
+const b1_mod=mod1.actualATK;
+
+// Bucket 2
+const b2_base=(v('skillpage_base')/100)*(1+v('skillmult_base')/100);
+const b2_mod=((v('skillpage_base')+v('skillpage_inc'))/100)*(1+(v('skillmult_base')+v('skillmult_inc'))/100);
+// Bucket 3
+const b3_base=1+v('cdmg_base')/100;
+const b3_mod=1+(v('cdmg_base')+v('cdmg_inc'))/100;
+// Bucket 4
+const b4_base=1+(v('eleENH_base')-v('eleRES_base'))/2.2/100;
+const b4_mod=1+((v('eleENH_base')+v('eleENH_inc'))-(v('eleRES_base')+v('eleRES_inc')))/2.2/100;
+// Bucket 5
+const b5_base=1+v('attrdmg_base')/100;
+const b5_mod=1+(v('attrdmg_base')+v('attrdmg_inc'))/100;
+// Bucket 6 (no 8% base anymore)
+const b6_base=1+v('dmgbuff_base')/100;
+const b6_mod=1+(v('dmgbuff_base')+v('dmgbuff_inc'))/100;
+// Bucket 7
+const b7_base=1+v('dmgbonus_base')/100;
+const b7_mod=1+(v('dmgbonus_base')+v('dmgbonus_inc'))/100;
+// Bucket 8 - uses either Skill DMG% or BATK DMG% based on toggle, never both
+const resBase=resonanceActive?(20+v('resdmg_base'))/100:0;
+const resMod=resonanceActive?(20+v('resdmg_base')+v('resdmg_inc'))/100:0;
+const atkBase=useBATK?v('batkdmg_base')/100:v('skilldmg_base')/100;
+const atkMod=useBATK?(v('batkdmg_base')+v('batkdmg_inc'))/100:(v('skilldmg_base')+v('skilldmg_inc'))/100;
+const b8_base=1+atkBase+v('aerialdmg_base')/100+v('specialdmg_base')/100+resBase;
+const b8_mod=1+atkMod+(v('aerialdmg_base')+v('aerialdmg_inc'))/100+(v('specialdmg_base')+v('specialdmg_inc'))/100+resMod;
+
+// Bucket 9 - Shield Break (30% base + field value) only when toggle active
+const sbBase=shieldBreakActive?(30+v('shieldbreak_base'))/100:0;
+const sbMod=shieldBreakActive?(30+v('shieldbreak_base')+v('shieldbreak_inc'))/100:0;
+const b9_base=1+v('bossdmg_base')/100+v('typedmg_base')/100+v('debuffdmg_base')/100+sbBase;
+const b9_mod=1+(v('bossdmg_base')+v('bossdmg_inc'))/100+(v('typedmg_base')+v('typedmg_inc'))/100+(v('debuffdmg_base')+v('debuffdmg_inc'))/100+sbMod;
+// Bucket 10 - Ele RES Red is flat, converted same as Ele ENH (÷2.2 to get %)
+const b10_base=(1+v('defred_base')/100)*(1+(v('eresred_base')/2.2)/100)*(1+v('dmgresred_base')/100);
+const b10_mod=(1+(v('defred_base')+v('defred_inc'))/100)*(1+((v('eresred_base')+v('eresred_inc'))/2.2)/100)*(1+(v('dmgresred_base')+v('dmgresred_inc'))/100);
+// Bucket 11
+const b11_base=1+v('additionaldmg_base')/100;
+const b11_mod=1+(v('additionaldmg_base')+v('additionaldmg_inc'))/100;
+
+updateBucketDisplay('b1',b1_base,b1_mod);updateBucketDisplay('b2',b2_base,b2_mod);updateBucketDisplay('b3',b3_base,b3_mod);updateBucketDisplay('b4',b4_base,b4_mod);updateBucketDisplay('b5',b5_base,b5_mod);updateBucketDisplay('b6',b6_base,b6_mod);updateBucketDisplay('b7',b7_base,b7_mod);updateBucketDisplay('b8',b8_base,b8_mod);updateBucketDisplay('b9',b9_base,b9_mod);updateBucketDisplay('b10',b10_base,b10_mod);updateBucketDisplay('b11',b11_base,b11_mod);
+// Also update bucket 10 inline header values
+document.getElementById('b10_base_inline').textContent=fmtMult(b10_base);
+document.getElementById('b10_mod_inline').textContent=fmtMult(b10_mod);
+const b10d=b10_base!==0?(b10_mod/b10_base-1):0;const b10di=document.getElementById('b10_diff_inline');
+if(Math.abs(b10d)<0.00005){b10di.textContent='—';b10di.className='bucket-diff neutral'}else{b10di.textContent=(b10d>0?'+':'')+(b10d*100).toFixed(2)+'%';b10di.className='bucket-diff '+(b10d>0?'positive':'negative')}
+
+const baseDmg=b1_base*b2_base*b3_base*b4_base*b5_base*b6_base*b7_base*b8_base*b9_base*b10_base*b11_base;
+const modDmg=b1_mod*b2_mod*b3_mod*b4_mod*b5_mod*b6_mod*b7_mod*b8_mod*b9_mod*b10_mod*b11_mod;
+document.getElementById('baseDmg').textContent=fmt(baseDmg);
+document.getElementById('modDmg').textContent=fmt(modDmg);
+const changePct=baseDmg>0?((modDmg/baseDmg-1)*100):0;
+const changeEl=document.getElementById('changePct');
+if(Math.abs(changePct)<0.005){changeEl.textContent='0.00%';changeEl.className='result-value change neutral'}else{changeEl.textContent=(changePct>0?'+':'')+changePct.toFixed(2)+'%';changeEl.className='result-value change '+(changePct>0?'positive':'negative')}}
+
+function resetAll(){document.querySelectorAll('.increase-input').forEach(el=>{el.value=''});calc()}
+function resetEverything(){document.querySelectorAll('input[type="number"]').forEach(el=>{el.value=''});document.getElementById('patk_base').value='';document.getElementById('str_base').value='';document.getElementById('patkpct_base').value='';document.getElementById('pdef_base').value='';document.getElementById('pen_base').value='';document.getElementById('shred_base').value='';shieldBreakActive=false;document.getElementById('shieldToggle').classList.remove('active');calc()}
+calc();
+</script>
+</body>
+</html>
