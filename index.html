@@ -60,8 +60,11 @@
   .atk-output-group{display:flex;flex-direction:column;gap:.2rem;min-width:0}
   .atk-output-label{font-size:.58rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
   .atk-output-row{display:flex;gap:.35rem;align-items:center;min-width:0}
-  .atk-output-val{font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:.3rem .45rem;border-radius:4px;background:var(--bg-output);border:1px solid rgba(59,130,246,.12);color:var(--text-secondary);text-align:center;white-space:nowrap}
-  .atk-output-val.mod{color:var(--accent-cyan);border-color:rgba(34,211,238,.15)}
+  .atk-output-input{font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:.3rem .45rem;border-radius:4px;background:var(--bg-output);border:1px solid rgba(59,130,246,.12);color:var(--text-secondary);text-align:center;flex:1;min-width:0;outline:none;cursor:default}
+  .atk-output-input.mod{color:var(--accent-cyan);border-color:rgba(34,211,238,.15)}
+  .atk-output-input#totalpatk_base{color:var(--text-primary);border-color:rgba(251,191,36,.25);cursor:text;-moz-appearance:textfield}
+  .atk-output-input#totalpatk_base::-webkit-outer-spin-button,.atk-output-input#totalpatk_base::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .atk-output-input#totalpatk_base:focus{border-color:var(--accent-amber)}
   .atk-arrow{color:var(--text-muted);font-size:.65rem}
   /* Conditional tag */
   .conditional-badge{display:inline-block;font-size:.55rem;padding:.1rem .35rem;border-radius:3px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:#a78bfa;text-transform:uppercase;letter-spacing:.06em;font-weight:600;vertical-align:middle;margin-left:.25rem}
@@ -70,7 +73,7 @@
     .bucket-grid{grid-template-columns:1fr}
     .fields-grid.triple{grid-template-columns:1fr 1fr!important}
     .atk-outputs{grid-template-columns:1fr!important}
-    .atk-output-val{flex:1;min-width:0}
+    .atk-output-input{flex:1;min-width:0}
   }
   @media(max-width:480px){
     .container{padding:1rem .75rem 3rem}
@@ -94,7 +97,7 @@
     .bucket-result-label{font-size:.56rem}
     .atk-outputs{grid-template-columns:1fr!important;gap:.5rem}
     .atk-output-row{gap:.3rem;display:flex}
-    .atk-output-val{font-size:.68rem;padding:.25rem .4rem;flex:1;min-width:0}
+    .atk-output-input{font-size:.68rem;padding:.25rem .4rem;flex:1;min-width:0}
     .atk-output-label{font-size:.54rem}
     .atk-arrow{font-size:.55rem;flex-shrink:0}
     .note-text{font-size:.55rem}
@@ -143,15 +146,15 @@
       <div class="atk-outputs">
         <div class="atk-output-group">
           <div class="atk-output-label">Total PATK</div>
-          <div class="atk-output-row"><div class="atk-output-val" id="totalpatk_base">—</div><span class="atk-arrow">→</span><div class="atk-output-val mod" id="totalpatk_mod">—</div></div>
+          <div class="atk-output-row"><input type="number" class="atk-output-input" id="totalpatk_base" oninput="reversePATK()" value=""><span class="atk-arrow">→</span><input type="text" class="atk-output-input mod" id="totalpatk_mod" readonly value="—"></div>
         </div>
         <div class="atk-output-group">
           <div class="atk-output-label">DR Multiplier</div>
-          <div class="atk-output-row"><div class="atk-output-val" id="dr_base">—</div><span class="atk-arrow">→</span><div class="atk-output-val mod" id="dr_mod">—</div></div>
+          <div class="atk-output-row"><input type="text" class="atk-output-input" id="dr_base" readonly value="—"><span class="atk-arrow">→</span><input type="text" class="atk-output-input mod" id="dr_mod" readonly value="—"></div>
         </div>
         <div class="atk-output-group">
           <div class="atk-output-label">Actual ATK</div>
-          <div class="atk-output-row"><div class="atk-output-val" id="actualatk_base">—</div><span class="atk-arrow">→</span><div class="atk-output-val mod" id="actualatk_mod">—</div></div>
+          <div class="atk-output-row"><input type="text" class="atk-output-input" id="actualatk_base" readonly value="—"><span class="atk-arrow">→</span><input type="text" class="atk-output-input mod" id="actualatk_mod" readonly value="—"></div>
         </div>
       </div>
       <div class="bucket-result"><span class="bucket-result-label">Bucket Value</span><div class="bucket-result-values"><span class="bucket-base-val" id="b1_base">—</span><span>→</span><span class="bucket-mod-val" id="b1_mod">—</span><span class="bucket-diff neutral" id="b1_diff">—</span></div></div>
@@ -302,7 +305,7 @@ function toggleAtkType(){useBATK=!useBATK;document.getElementById('atkTypeToggle
 function toggleBucket10(){bucket10Open=!bucket10Open;document.getElementById('bucket10content').style.display=bucket10Open?'block':'none';document.getElementById('b10toggle').textContent=bucket10Open?'▼ Hide':'▶ Show'}
 function v(id){return parseFloat(document.getElementById(id).value)||0}
 function clampMin(el,min){if(el.value!==''&&parseFloat(el.value)<min)el.value=min}
-function fmt(n){if(n===0)return'0';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e5)return(n/1e3).toFixed(1)+'K';return Math.round(n).toLocaleString()}
+function fmt(n){if(n===0)return'0';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e5)return(n/1e3).toFixed(1)+'K';return String(Math.round(n))}
 function fmtMult(n){return'×'+n.toFixed(4)}
 function fmtPct(n){return(n*100).toFixed(1)+'%'}
 function updateBucketDisplay(id,base,mod){document.getElementById(id+'_base').textContent=fmtMult(base);document.getElementById(id+'_mod').textContent=fmtMult(mod);const diff=base!==0?(mod/base-1):0;const diffEl=document.getElementById(id+'_diff');if(Math.abs(diff)<0.00005){diffEl.textContent='—';diffEl.className='bucket-diff neutral'}else{diffEl.textContent=(diff>0?'+':'')+(diff*100).toFixed(2)+'%';diffEl.className='bucket-diff '+(diff>0?'positive':'negative')}}
@@ -315,17 +318,22 @@ function calcATKparts(patk,str,patkpct,pdef,pen,shred){
   return{totalPATK,dr,actualATK};
 }
 
+let _reverseMode=false;
+
 function calc(){
 // Bucket 1
 const base1=calcATKparts(v('patk_base'),v('str_base'),v('patkpct_base'),v('pdef_base'),v('pen_base'),v('shred_base'));
 const mod1=calcATKparts(v('patk_base')+v('patk_inc'),v('str_base')+v('str_inc'),v('patkpct_base')+v('patkpct_inc'),v('pdef_base')+v('pdef_inc'),v('pen_base')+v('pen_inc'),v('shred_base')+v('shred_inc'));
-// Update ATK output fields
-document.getElementById('totalpatk_base').textContent=fmt(base1.totalPATK);
-document.getElementById('totalpatk_mod').textContent=fmt(mod1.totalPATK);
-document.getElementById('dr_base').textContent=fmtPct(base1.dr);
-document.getElementById('dr_mod').textContent=fmtPct(mod1.dr);
-document.getElementById('actualatk_base').textContent=fmt(base1.actualATK);
-document.getElementById('actualatk_mod').textContent=fmt(mod1.actualATK);
+// Update ATK output fields — only update totalpatk_base if not currently being reverse-edited
+if(!_reverseMode){
+  const tp=document.getElementById('totalpatk_base');
+  if(document.activeElement!==tp)tp.value=fmt(base1.totalPATK);
+}
+document.getElementById('totalpatk_mod').value=fmt(mod1.totalPATK);
+document.getElementById('dr_base').value=fmtPct(base1.dr);
+document.getElementById('dr_mod').value=fmtPct(mod1.dr);
+document.getElementById('actualatk_base').value=fmt(base1.actualATK);
+document.getElementById('actualatk_mod').value=fmt(mod1.actualATK);
 const b1_base=base1.actualATK;
 const b1_mod=mod1.actualATK;
 
@@ -381,6 +389,21 @@ document.getElementById('modDmg').textContent=fmt(modDmg);
 const changePct=baseDmg>0?((modDmg/baseDmg-1)*100):0;
 const changeEl=document.getElementById('changePct');
 if(Math.abs(changePct)<0.005){changeEl.textContent='0.00%';changeEl.className='result-value change neutral'}else{changeEl.textContent=(changePct>0?'+':'')+changePct.toFixed(2)+'%';changeEl.className='result-value change '+(changePct>0?'positive':'negative')}}
+
+function reversePATK(){
+  const totalPATK=parseFloat(document.getElementById('totalpatk_base').value)||0;
+  const str=v('str_base');
+  const patkpct=v('patkpct_base');
+  const divisor=(1+str/1000)*(1+patkpct/100);
+  if(divisor>0){
+    const patk=totalPATK/divisor;
+    document.getElementById('patk_base').value=Math.round(patk);
+  }
+  _reverseMode=true;
+  calc();
+  _reverseMode=false;
+  saveAll();
+}
 
 function resetAll(){document.querySelectorAll('.increase-input').forEach(el=>{el.value=''});saveAll();calc()}
 function resetEverything(){document.querySelectorAll('input[type="number"]').forEach(el=>{el.value=''});shieldBreakActive=false;resonanceActive=false;useBATK=false;document.getElementById('shieldToggle').classList.remove('active');document.getElementById('resonanceToggle').classList.remove('active');document.getElementById('atkTypeToggle').classList.remove('active');document.getElementById('atkTypeToggleLabel').textContent='Using: Skill DMG%';document.getElementById('atkTypeLabel').textContent='Skill DMG%';saveAll();calc()}
