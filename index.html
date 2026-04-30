@@ -296,8 +296,7 @@
   <div class="bucket-card full-width" id="efficiencyCard">
     <div class="bucket-header"><div class="bucket-number">★</div><div class="bucket-title">1% Damage Efficiency Rankings</div></div>
     <div class="bucket-formula">How much of each base stat is needed to gain +1% total damage (lower is better).</div>
-    <div id="efficiencyTop3" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.65rem"></div>
-    <div style="overflow-x:auto;border:1px solid rgba(255,255,255,.06);border-radius:6px">
+        <div style="overflow-x:auto;border:1px solid rgba(255,255,255,.06);border-radius:6px">
       <table id="efficiencyTable" style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.68rem;min-width:720px">
         <thead>
           <tr style="background:rgba(59,130,246,.08)">
@@ -307,7 +306,7 @@
         <tbody id="efficiencyRows"></tbody>
       </table>
     </div>
-    <div class="note-text">Top 3 efficiency stats are highlighted with gold/silver/bronze badges.</div>
+    <div class="note-text">Ranked by lowest required stat gain for +1% damage.</div>
   </div>
   </div>
 </div>
@@ -370,27 +369,22 @@ function calcTotalFromState(s){
 function renderEfficiencyGuide(baseTotal){
   const state=getState();
   const target=baseTotal*1.01;
+
   const statRows=[
     {bucket:'1',label:'PATK (flat)',key:'patk',unit:'flat'},
-    {bucket:'1',label:'STR',key:'str',unit:'flat'},
+    {bucket:'1',label:'STR (flat)',key:'str',unit:'flat'},
     {bucket:'1',label:'PATK%',key:'patkpct',unit:'% point'},
     {bucket:'1',label:'PEN%',key:'pen',unit:'% point'},
-    {bucket:'1',label:'PDEF Shred',key:'shred',unit:'flat'},
-    {bucket:'2',label:'Skill Page %',key:'skillpage',unit:'% point'},
+    {bucket:'1',label:'PDEF Shred (flat)',key:'shred',unit:'flat'},
     {bucket:'2',label:'Skill Mult Bonus%',key:'skillmult',unit:'% point'},
     {bucket:'3',label:'Crit DMG%',key:'cdmg',unit:'% point'},
-    {bucket:'4',label:'Elemental ENH%',key:'eleENH',unit:'% point'},
+    {bucket:'4',label:'Elemental ENH (flat)',key:'eleENH',unit:'flat'},
     {bucket:'5',label:'Attribute DMG%',key:'attrdmg',unit:'% point'},
     {bucket:'6',label:'DMG Buff%',key:'dmgbuff',unit:'% point'},
     {bucket:'7',label:'DMG Bonus%',key:'dmgbonus',unit:'% point'},
-    {bucket:'8',label:useBATK?'BATK/Skill DMG% (grouped)':'Skill/BATK DMG% (grouped)',key:useBATK?'batkdmg':'skilldmg',unit:'% point'},
-    {bucket:'9',label:'DMG to Boss%',key:'bossdmg',unit:'% point'},
-    {bucket:'9',label:'DMG to Type%',key:'typedmg',unit:'% point'},
-    {bucket:'9',label:'DMG to Debuff%',key:'debuffdmg',unit:'% point'},
-    {bucket:'10',label:'DEF Reduction%',key:'defred',unit:'% point'},
-    {bucket:'10',label:'Ele RES Reduction',key:'eresred',unit:'flat'},
-    {bucket:'10',label:'DMG Resist Red%',key:'dmgresred',unit:'% point'},
-    {bucket:'11',label:'Additional DMG%',key:'additionaldmg',unit:'% point'}
+    {bucket:'8',label:useBATK?'BATK/Aerial/Special/Resonance DMG% (grouped)':'Skill/Aerial/Special/Resonance DMG% (grouped)',key:useBATK?'batkdmg':'skilldmg',unit:'% point'},
+    {bucket:'9',label:'Boss/Type/Debuff/Shield Break DMG% (grouped)',key:'bossdmg',unit:'% point'},
+    {bucket:'10',label:'Additional DMG%',key:'additionaldmg',unit:'% point'}
   ];
 
   const results=[];
@@ -398,7 +392,20 @@ function renderEfficiencyGuide(baseTotal){
     if(baseTotal<=0){results.push({...row,needed:Infinity});continue;}
     let lo=0,hi=1;
     for(let i=0;i<30;i++){
-      const tmp={...state}; tmp[row.key]+=hi;
+      const tmp={...state};
+      if(row.bucket==='8'){
+        tmp[useBATK?'batkdmg':'skilldmg']+=hi;
+        tmp.aerialdmg+=hi;
+        tmp.specialdmg+=hi;
+        if(resonanceActive) tmp.resdmg+=hi;
+      }else if(row.bucket==='9'){
+        tmp.bossdmg+=hi;
+        tmp.typedmg+=hi;
+        tmp.debuffdmg+=hi;
+        if(shieldBreakActive) tmp.shieldbreak+=hi;
+      }else{
+        tmp[row.key]+=hi;
+      }
       if(calcTotalFromState(tmp)>=target) break;
       hi*=2;
       if(hi>1e7) break;
@@ -406,7 +413,20 @@ function renderEfficiencyGuide(baseTotal){
     if(hi>1e7){results.push({...row,needed:Infinity});continue;}
     for(let i=0;i<45;i++){
       const mid=(lo+hi)/2;
-      const tmp={...state}; tmp[row.key]+=mid;
+      const tmp={...state};
+      if(row.bucket==='8'){
+        tmp[useBATK?'batkdmg':'skilldmg']+=mid;
+        tmp.aerialdmg+=mid;
+        tmp.specialdmg+=mid;
+        if(resonanceActive) tmp.resdmg+=mid;
+      }else if(row.bucket==='9'){
+        tmp.bossdmg+=mid;
+        tmp.typedmg+=mid;
+        tmp.debuffdmg+=mid;
+        if(shieldBreakActive) tmp.shieldbreak+=mid;
+      }else{
+        tmp[row.key]+=mid;
+      }
       if(calcTotalFromState(tmp)>=target) hi=mid; else lo=mid;
     }
     results.push({...row,needed:hi});
@@ -414,9 +434,6 @@ function renderEfficiencyGuide(baseTotal){
 
   results.sort((a,b)=>a.needed-b.needed);
   const medal=['🥇','🥈','🥉'];
-  const top3=results.slice(0,3).map((r,i)=>`<div style="padding:.35rem .55rem;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:${i===0?'rgba(251,191,36,.14)':i===1?'rgba(148,163,184,.14)':'rgba(180,83,9,.14)'}">${medal[i]} B${r.bucket} ${r.label}: +${Number.isFinite(r.needed)?r.needed.toFixed(2):'n/a'} ${r.unit}</div>`).join('');
-  document.getElementById('efficiencyTop3').innerHTML=top3;
-
   const rowsHtml=results.map((r,idx)=>{
     const mark=idx<3?medal[idx]:String(idx+1);
     const bg=idx===0?'rgba(251,191,36,.08)':idx===1?'rgba(148,163,184,.08)':idx===2?'rgba(180,83,9,.08)':'transparent';
@@ -425,6 +442,7 @@ function renderEfficiencyGuide(baseTotal){
   }).join('');
   document.getElementById('efficiencyRows').innerHTML=rowsHtml;
 }
+
 
 
 function calc(){
