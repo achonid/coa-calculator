@@ -117,7 +117,7 @@
     <div style="width:80px;height:2px;background:linear-gradient(90deg,transparent,var(--accent-cyan),var(--accent-blue),transparent);margin:.5rem auto .7rem"></div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem">
       <p style="font-size:.72rem;color:var(--text-secondary);letter-spacing:.04em;">Made by achonid — if this tool helped you, consider supporting</p>
-      <a href="https://buymeacoffee.com/achonid" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:var(--accent-amber);padding:.3rem .65rem;border-radius:6px;font-family:'Chakra Petch',sans-serif;font-size:.65rem;text-decoration:none;letter-spacing:.03em;transition:all .2s" onmouseover="this.style.background='rgba(251,191,36,.2)';this.style.borderColor='rgba(251,191,36,.4)'" onmouseout="this.style.background='rgba(251,191,36,.1)';this.style.borderColor='rgba(251,191,36,.25)'">⚔️ Buy me a +24</a>
+      <a href="https://buymeacoffee.com/achonid" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:var(--accent-amber);padding:.3rem .65rem;border-radius:6px;font-family:'Chakra Petch',sans-serif;font-size:.65rem;text-decoration:none;letter-spacing:.03em;transition:all .2s" onmouseover="this.style.background='rgba(251,191,36,.2)';this.style.borderColor='rgba(251,191,36,.4)'" onmouseout="this.style.background='rgba(251,191,36,.1)';this.style.borderColor='rgba(251,191,36,.25)'">⚔️ Support the creator</a>
     </div>
   </header>
   <div class="results-banner">
@@ -292,6 +292,13 @@
       </div>
     </div>
 
+
+  <div class="bucket-card full-width" id="efficiencyCard">
+    <div class="bucket-header"><div class="bucket-number">★</div><div class="bucket-title">1% Damage Efficiency Guide</div></div>
+    <div class="bucket-formula">Estimated stat increase needed (from current base stats) to gain +1% total damage.</div>
+    <div id="efficiencyList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.5rem .75rem"></div>
+    <div class="note-text">Lower required value = better immediate stat efficiency for your current setup.</div>
+  </div>
   </div>
 </div>
 <script>
@@ -312,13 +319,77 @@ function updateBucketDisplay(id,base,mod){document.getElementById(id+'_base').te
 
 function calcATKparts(patk,str,patkpct,pdef,pen,shred){
   const totalPATK=patk*(1+str/1000)*(1+patkpct/100);
-  const effectiveDef=pdef*(1-pen/100);
+  // PEN above 100% should not produce negative defense (which can inflate DR beyond 100%).
+  const effectiveDef=Math.max(0,pdef*(1-pen/100));
   const dr=3500/(3500+effectiveDef);
   const actualATK=totalPATK*dr+shred;
   return{totalPATK,dr,actualATK};
 }
 
 let _reverseMode=false;
+
+function getState(){
+  return {
+    patk:v('patk_base'),str:v('str_base'),patkpct:v('patkpct_base'),pdef:v('pdef_base'),pen:v('pen_base'),shred:v('shred_base'),
+    skillpage:v('skillpage_base'),skillmult:v('skillmult_base'),cdmg:v('cdmg_base'),eleENH:v('eleENH_base'),eleRES:v('eleRES_base'),
+    attrdmg:v('attrdmg_base'),dmgbuff:v('dmgbuff_base'),dmgbonus:v('dmgbonus_base'),skilldmg:v('skilldmg_base'),batkdmg:v('batkdmg_base'),
+    aerialdmg:v('aerialdmg_base'),specialdmg:v('specialdmg_base'),resdmg:v('resdmg_base'),bossdmg:v('bossdmg_base'),typedmg:v('typedmg_base'),
+    debuffdmg:v('debuffdmg_base'),shieldbreak:v('shieldbreak_base'),defred:v('defred_base'),eresred:v('eresred_base'),dmgresred:v('dmgresred_base'),
+    additionaldmg:v('additionaldmg_base')
+  };
+}
+
+function calcTotalFromState(s){
+  const b1=calcATKparts(s.patk,s.str,s.patkpct,s.pdef,s.pen,s.shred).actualATK;
+  const b2=(s.skillpage/100)*(1+s.skillmult/100);
+  const b3=1+s.cdmg/100;
+  const b4=1+(s.eleENH-s.eleRES)/2.2/100;
+  const b5=1+s.attrdmg/100;
+  const b6=1+s.dmgbuff/100;
+  const b7=1+s.dmgbonus/100;
+  const res=resonanceActive?(20+s.resdmg)/100:0;
+  const atk=useBATK?s.batkdmg/100:s.skilldmg/100;
+  const b8=1+atk+s.aerialdmg/100+s.specialdmg/100+res;
+  const sb=shieldBreakActive?(30+s.shieldbreak)/100:0;
+  const b9=1+s.bossdmg/100+s.typedmg/100+s.debuffdmg/100+sb;
+  const b10=(1+s.defred/100)*(1+(s.eresred/2.2)/100)*(1+s.dmgresred/100);
+  const b11=1+s.additionaldmg/100;
+  return b1*b2*b3*b4*b5*b6*b7*b8*b9*b10*b11;
+}
+
+function renderEfficiencyGuide(baseTotal){
+  const state=getState();
+  const target=baseTotal*1.01;
+  const rows=[
+    {label:'Elemental ENH%',key:'eleENH',unit:'% point',step:0.01},
+    {label:'DMG Bonus%',key:'dmgbonus',unit:'% point',step:0.01},
+    {label:useBATK?'BATK DMG%':'Skill DMG%',key:useBATK?'batkdmg':'skilldmg',unit:'% point',step:0.01},
+    {label:'Attribute DMG%',key:'attrdmg',unit:'% point',step:0.01},
+    {label:'Crit DMG%',key:'cdmg',unit:'% point',step:0.01},
+    {label:'PEN%',key:'pen',unit:'% point',step:0.01}
+  ];
+  const out=[];
+  for(const row of rows){
+    const test={...state};
+    const current=calcTotalFromState(test);
+    if(current<=0){out.push(`<div class="bucket-result"><span>${row.label}</span><span class="bucket-diff neutral">n/a</span></div>`);continue;}
+    let lo=0,hi=1;
+    for(let i=0;i<30;i++){
+      const tmp={...state}; tmp[row.key]+=hi;
+      if(calcTotalFromState(tmp)>=target) break;
+      hi*=2;
+      if(hi>1e6) break;
+    }
+    if(hi>1e6){out.push(`<div class="bucket-result"><span>${row.label}</span><span class="bucket-diff neutral">unreachable</span></div>`);continue;}
+    for(let i=0;i<40;i++){
+      const mid=(lo+hi)/2;
+      const tmp={...state}; tmp[row.key]+=mid;
+      if(calcTotalFromState(tmp)>=target) hi=mid; else lo=mid;
+    }
+    out.push(`<div class="bucket-result"><span class="bucket-result-label">${row.label}</span><div class="bucket-result-values"><span class="bucket-mod-val">+${hi.toFixed(2)}</span><span class="field-unit">${row.unit}</span></div></div>`);
+  }
+  document.getElementById('efficiencyList').innerHTML=out.join('');
+}
 
 function calc(){
 // Bucket 1
@@ -388,7 +459,8 @@ document.getElementById('baseDmg').textContent=fmt(baseDmg);
 document.getElementById('modDmg').textContent=fmt(modDmg);
 const changePct=baseDmg>0?((modDmg/baseDmg-1)*100):0;
 const changeEl=document.getElementById('changePct');
-if(Math.abs(changePct)<0.005){changeEl.textContent='0.00%';changeEl.className='result-value change neutral'}else{changeEl.textContent=(changePct>0?'+':'')+changePct.toFixed(2)+'%';changeEl.className='result-value change '+(changePct>0?'positive':'negative')}}
+if(Math.abs(changePct)<0.005){changeEl.textContent='0.00%';changeEl.className='result-value change neutral'}else{changeEl.textContent=(changePct>0?'+':'')+changePct.toFixed(2)+'%';changeEl.className='result-value change '+(changePct>0?'positive':'negative')}
+renderEfficiencyGuide(baseDmg)}
 
 function reversePATK(){
   const totalPATK=parseFloat(document.getElementById('totalpatk_base').value)||0;
