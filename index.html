@@ -21,6 +21,8 @@
   .result-value.base{color:var(--text-secondary)}.result-value.modified{color:var(--accent-cyan)}.result-value.change{font-size:1.1rem}.result-value.change.positive{color:var(--positive)}.result-value.change.negative{color:var(--negative)}.result-value.change.neutral{color:var(--text-muted)}
   .bucket-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;min-width:0}
   .bucket-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;transition:border-color .2s;min-width:0;overflow:hidden}
+  .bucket-card.bottom-bind{display:flex;flex-direction:column}
+  .bucket-card.bottom-bind .bucket-result{margin-top:auto}
   .bucket-card:hover{border-color:rgba(59,130,246,.3)}.bucket-card.full-width{grid-column:1/-1}
   .bucket-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
   .bucket-number{width:22px;height:22px;border-radius:5px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;color:var(--accent-blue);flex-shrink:0}
@@ -117,7 +119,7 @@
     <div style="width:80px;height:2px;background:linear-gradient(90deg,transparent,var(--accent-cyan),var(--accent-blue),transparent);margin:.5rem auto .7rem"></div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem">
       <p style="font-size:.72rem;color:var(--text-secondary);letter-spacing:.04em;">Made by achonid — if this tool helped you, consider supporting</p>
-      <a href="https://buymeacoffee.com/achonid" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:var(--accent-amber);padding:.3rem .65rem;border-radius:6px;font-family:'Chakra Petch',sans-serif;font-size:.65rem;text-decoration:none;letter-spacing:.03em;transition:all .2s" onmouseover="this.style.background='rgba(251,191,36,.2)';this.style.borderColor='rgba(251,191,36,.4)'" onmouseout="this.style.background='rgba(251,191,36,.1)';this.style.borderColor='rgba(251,191,36,.25)'">⚔️ Buy me a +24</a>
+      <a href="https://buymeacoffee.com/achonid" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:var(--accent-amber);padding:.3rem .65rem;border-radius:6px;font-family:'Chakra Petch',sans-serif;font-size:.65rem;text-decoration:none;letter-spacing:.03em;transition:all .2s" onmouseover="this.style.background='rgba(251,191,36,.2)';this.style.borderColor='rgba(251,191,36,.4)'" onmouseout="this.style.background='rgba(251,191,36,.1)';this.style.borderColor='rgba(251,191,36,.25)'">⚔️ Support the creator</a>
     </div>
   </header>
   <div class="results-banner">
@@ -214,7 +216,7 @@
     </div>
 
     <!-- 7 DMG Bonus -->
-    <div class="bucket-card">
+    <div class="bucket-card bottom-bind">
       <div class="bucket-header"><div class="bucket-number">7</div><div class="bucket-title">DMG Bonus</div></div>
       <div class="bucket-formula">= 1 + DMG Bonus%</div>
       <div class="fields-grid">
@@ -243,7 +245,7 @@
     </div>
 
     <!-- 9 Debuff/Type/Boss -->
-    <div class="bucket-card">
+    <div class="bucket-card bottom-bind">
       <div class="bucket-header"><div class="bucket-number">9</div><div class="bucket-title">Debuff / Type / Boss DMG</div></div>
       <div class="bucket-formula">= 1 + Boss% + Type% + all Debuff DMG% + Shield Break DMG%</div>
       <div class="fields-grid">
@@ -292,6 +294,23 @@
       </div>
     </div>
 
+
+  <div class="bucket-card full-width" id="efficiencyCard">
+    <div class="bucket-header"><div class="bucket-number">★</div><div class="bucket-title">1% Damage Efficiency Rankings</div></div>
+    <div class="bucket-formula">How much of each base stat is needed to gain +1% total damage (lower is better).</div>
+    <div class="toggle-row" style="margin:.35rem 0 .6rem"><div class="toggle" id="efficiencySortToggle" onclick="toggleEfficiencySort()"></div><div class="toggle-label" id="efficiencySortLabel">Ranking: Raw needed amount</div></div>
+        <div style="overflow-x:auto;border:1px solid rgba(255,255,255,.06);border-radius:6px">
+      <table id="efficiencyTable" style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.68rem;min-width:720px">
+        <thead>
+          <tr style="background:rgba(59,130,246,.08)">
+            <th style="text-align:left;padding:.5rem">Rank</th><th style="text-align:left;padding:.5rem">Bucket</th><th style="text-align:left;padding:.5rem">Stat</th><th style="text-align:right;padding:.5rem">Need for +1%</th><th style="text-align:right;padding:.5rem">Need / Current</th>
+          </tr>
+        </thead>
+        <tbody id="efficiencyRows"></tbody>
+      </table>
+    </div>
+    <div class="note-text">Ranked by lowest required stat gain for +1% damage.</div>
+  </div>
   </div>
 </div>
 <script>
@@ -299,10 +318,12 @@ let shieldBreakActive=false;
 let resonanceActive=false;
 let useBATK=false;
 let bucket10Open=false;
+let efficiencySortMode='raw';
 function toggleShield(){shieldBreakActive=!shieldBreakActive;document.getElementById('shieldToggle').classList.toggle('active',shieldBreakActive);saveAll();calc()}
 function toggleResonance(){resonanceActive=!resonanceActive;document.getElementById('resonanceToggle').classList.toggle('active',resonanceActive);saveAll();calc()}
 function toggleAtkType(){useBATK=!useBATK;document.getElementById('atkTypeToggle').classList.toggle('active',useBATK);document.getElementById('atkTypeToggleLabel').textContent=useBATK?'Using: BATK DMG%':'Using: Skill DMG%';document.getElementById('atkTypeLabel').textContent=useBATK?'BATK DMG%':'Skill DMG%';saveAll();calc()}
 function toggleBucket10(){bucket10Open=!bucket10Open;document.getElementById('bucket10content').style.display=bucket10Open?'block':'none';document.getElementById('b10toggle').textContent=bucket10Open?'▼ Hide':'▶ Show'}
+function toggleEfficiencySort(){efficiencySortMode=efficiencySortMode==='raw'?'relative':'raw';document.getElementById('efficiencySortToggle').classList.toggle('active',efficiencySortMode==='relative');document.getElementById('efficiencySortLabel').textContent=efficiencySortMode==='relative'?'Ranking: Relative burden (Need ÷ Current)':'Ranking: Raw needed amount';calc()}
 function v(id){return parseFloat(document.getElementById(id).value)||0}
 function clampMin(el,min){if(el.value!==''&&parseFloat(el.value)<min)el.value=min}
 function fmt(n){if(n===0)return'0';if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';if(Math.abs(n)>=1e5)return(n/1e3).toFixed(1)+'K';return String(Math.round(n))}
@@ -312,13 +333,114 @@ function updateBucketDisplay(id,base,mod){document.getElementById(id+'_base').te
 
 function calcATKparts(patk,str,patkpct,pdef,pen,shred){
   const totalPATK=patk*(1+str/1000)*(1+patkpct/100);
-  const effectiveDef=pdef*(1-pen/100);
+  // PEN above 100% should not produce negative defense (which can inflate DR beyond 100%).
+  const effectiveDef=Math.max(0,pdef*(1-pen/100));
   const dr=3500/(3500+effectiveDef);
   const actualATK=totalPATK*dr+shred;
   return{totalPATK,dr,actualATK};
 }
 
 let _reverseMode=false;
+
+function getState(){
+  return {
+    patk:v('patk_base'),str:v('str_base'),patkpct:v('patkpct_base'),pdef:v('pdef_base'),pen:v('pen_base'),shred:v('shred_base'),
+    skillpage:v('skillpage_base'),skillmult:v('skillmult_base'),cdmg:v('cdmg_base'),eleENH:v('eleENH_base'),eleRES:v('eleRES_base'),
+    attrdmg:v('attrdmg_base'),dmgbuff:v('dmgbuff_base'),dmgbonus:v('dmgbonus_base'),skilldmg:v('skilldmg_base'),batkdmg:v('batkdmg_base'),
+    aerialdmg:v('aerialdmg_base'),specialdmg:v('specialdmg_base'),resdmg:v('resdmg_base'),bossdmg:v('bossdmg_base'),typedmg:v('typedmg_base'),
+    debuffdmg:v('debuffdmg_base'),shieldbreak:v('shieldbreak_base'),defred:v('defred_base'),eresred:v('eresred_base'),dmgresred:v('dmgresred_base'),
+    additionaldmg:v('additionaldmg_base')
+  };
+}
+
+function calcTotalFromState(s){
+  const b1=calcATKparts(s.patk,s.str,s.patkpct,s.pdef,s.pen,s.shred).actualATK;
+  const b2=(s.skillpage/100)*(1+s.skillmult/100);
+  const b3=1+s.cdmg/100;
+  const b4=1+(s.eleENH-s.eleRES)/2.2/100;
+  const b5=1+s.attrdmg/100;
+  const b6=1+s.dmgbuff/100;
+  const b7=1+s.dmgbonus/100;
+  const res=resonanceActive?(20+s.resdmg)/100:0;
+  const atk=useBATK?s.batkdmg/100:s.skilldmg/100;
+  const b8=1+atk+s.aerialdmg/100+s.specialdmg/100+res;
+  const sb=shieldBreakActive?(30+s.shieldbreak)/100:0;
+  const b9=1+s.bossdmg/100+s.typedmg/100+s.debuffdmg/100+sb;
+  const b10=(1+s.defred/100)*(1+(s.eresred/2.2)/100)*(1+s.dmgresred/100);
+  const b11=1+s.additionaldmg/100;
+  return b1*b2*b3*b4*b5*b6*b7*b8*b9*b10*b11;
+}
+
+function renderEfficiencyGuide(baseTotal){
+  const state=getState();
+  const target=baseTotal*1.01;
+
+  const statRows=[
+    {bucket:'1',label:'PATK (flat)',key:'patk',unit:'flat'},
+    {bucket:'1',label:'STR (flat)',key:'str',unit:'flat'},
+    {bucket:'1',label:'PATK%',key:'patkpct',unit:'% point'},
+    {bucket:'1',label:'PEN%',key:'pen',unit:'% point'},
+    {bucket:'1',label:'PDEF Shred (flat)',key:'shred',unit:'flat'},
+    {bucket:'2',label:'Skill Mult Bonus%',key:'skillmult',unit:'% point'},
+    {bucket:'3',label:'Crit DMG%',key:'cdmg',unit:'% point'},
+    {bucket:'4',label:'Elemental ENH (flat)',key:'eleENH',unit:'flat'},
+    {bucket:'5',label:'Attribute DMG%',key:'attrdmg',unit:'% point'},
+    {bucket:'6',label:'DMG Buff%',key:'dmgbuff',unit:'% point'},
+    {bucket:'7',label:'DMG Bonus%',key:'dmgbonus',unit:'% point'},
+    {bucket:'8',label:useBATK?'BATK/Aerial/Special/Resonance DMG% (grouped)':'Skill/Aerial/Special/Resonance DMG% (grouped)',key:useBATK?'batkdmg':'skilldmg',unit:'% point'},
+    {bucket:'9',label:'Boss/Type/Debuff/Shield Break DMG% (grouped)',key:'bossdmg',unit:'% point'},
+    {bucket:'10',label:'Additional DMG%',key:'additionaldmg',unit:'% point'}
+  ];
+
+  const results=[];
+  for(const row of statRows){
+    if(baseTotal<=0){results.push({...row,needed:Infinity});continue;}
+    let lo=0,hi=1;
+    for(let i=0;i<30;i++){
+      const tmp={...state};
+      if(row.bucket==='8'){
+        // Bucket 8 sources are additive with equal weight; model as +X to one representative source.
+        tmp[useBATK?'batkdmg':'skilldmg']+=hi;
+      }else if(row.bucket==='9'){
+        // Bucket 9 sources are additive with equal weight; model as +X to one representative source.
+        tmp.bossdmg+=hi;
+      }else{
+        tmp[row.key]+=hi;
+      }
+      if(calcTotalFromState(tmp)>=target) break;
+      hi*=2;
+      if(hi>1e7) break;
+    }
+    if(hi>1e7){results.push({...row,needed:Infinity});continue;}
+    for(let i=0;i<45;i++){
+      const mid=(lo+hi)/2;
+      const tmp={...state};
+      if(row.bucket==='8'){
+        tmp[useBATK?'batkdmg':'skilldmg']+=mid;
+      }else if(row.bucket==='9'){
+        tmp.bossdmg+=mid;
+      }else{
+        tmp[row.key]+=mid;
+      }
+      if(calcTotalFromState(tmp)>=target) hi=mid; else lo=mid;
+    }
+    results.push({...row,needed:hi,current:Math.max(0,state[row.key]||0)});
+  }
+
+  results.forEach(r=>{r.relative=r.current>0?(r.needed/r.current):Infinity});
+  results.sort((a,b)=>efficiencySortMode==='relative'?(a.relative-b.relative):(a.needed-b.needed));
+  const medal=['🥇','🥈','🥉'];
+  const rowsHtml=results.map((r,idx)=>{
+    const mark=idx<3?medal[idx]:String(idx+1);
+    const bg=idx===0?'rgba(251,191,36,.08)':idx===1?'rgba(148,163,184,.08)':idx===2?'rgba(180,83,9,.08)':'transparent';
+    const val=Number.isFinite(r.needed)?`+${r.needed.toFixed(2)} ${r.unit}`:'n/a';
+    const rel=Number.isFinite(r.relative)?(r.relative*100).toFixed(2)+'%':'n/a';
+    return `<tr style="border-top:1px solid rgba(255,255,255,.06);background:${bg}"><td style="padding:.45rem">${mark}</td><td style="padding:.45rem">Bucket ${r.bucket}</td><td style="padding:.45rem">${r.label}</td><td style="padding:.45rem;text-align:right;color:var(--accent-cyan)">${val}</td><td style="padding:.45rem;text-align:right;color:var(--text-secondary)">${rel}</td></tr>`;
+  }).join('');
+  document.getElementById('efficiencyRows').innerHTML=rowsHtml;
+}
+
+
 
 function calc(){
 // Bucket 1
@@ -388,7 +510,8 @@ document.getElementById('baseDmg').textContent=fmt(baseDmg);
 document.getElementById('modDmg').textContent=fmt(modDmg);
 const changePct=baseDmg>0?((modDmg/baseDmg-1)*100):0;
 const changeEl=document.getElementById('changePct');
-if(Math.abs(changePct)<0.005){changeEl.textContent='0.00%';changeEl.className='result-value change neutral'}else{changeEl.textContent=(changePct>0?'+':'')+changePct.toFixed(2)+'%';changeEl.className='result-value change '+(changePct>0?'positive':'negative')}}
+if(Math.abs(changePct)<0.005){changeEl.textContent='0.00%';changeEl.className='result-value change neutral'}else{changeEl.textContent=(changePct>0?'+':'')+changePct.toFixed(2)+'%';changeEl.className='result-value change '+(changePct>0?'positive':'negative')}
+renderEfficiencyGuide(baseDmg)}
 
 function reversePATK(){
   const totalPATK=parseFloat(document.getElementById('totalpatk_base').value)||0;
