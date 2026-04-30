@@ -71,6 +71,19 @@
   /* Conditional tag */
   .conditional-badge{display:inline-block;font-size:.55rem;padding:.1rem .35rem;border-radius:3px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:#a78bfa;text-transform:uppercase;letter-spacing:.06em;font-weight:600;vertical-align:middle;margin-left:.25rem}
   #bucket10card .bucket-header{font-family:'IBM Plex Mono',monospace;font-size:.72rem}
+
+  .loadout-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+  .tabs{display:flex;gap:.4rem;flex-wrap:wrap;flex:1}
+  .tab-btn{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:var(--text-secondary);padding:.35rem .6rem;border-radius:6px;font-size:.72rem;cursor:pointer}
+  .tab-btn.active{color:var(--text-primary);border-color:var(--accent-cyan);background:rgba(34,211,238,.15)}
+  .name-input{background:var(--bg-input);border:1px solid var(--border);border-radius:5px;color:var(--text-primary);padding:.35rem .5rem;font-size:.72rem;min-width:180px}
+  .utility-btn{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.28);color:var(--text-primary);padding:.35rem .6rem;border-radius:6px;font-size:.7rem;cursor:pointer}
+  .share-panel{margin-top:1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:.85rem}
+  .share-panel summary{cursor:pointer;color:var(--text-secondary);font-size:.75rem}
+  .code-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem}
+  #buildCode{flex:1;min-width:220px;background:var(--bg-input);border:1px solid var(--border);border-radius:5px;padding:.4rem .5rem;color:var(--text-primary);font-family:'IBM Plex Mono',monospace;font-size:.68rem}
+  #increaseSummary{margin-top:.7rem;font-family:'IBM Plex Mono',monospace;font-size:.68rem;line-height:1.5;white-space:pre-wrap;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.06);padding:.6rem;border-radius:6px}
+
   @media(max-width:900px){
     .bucket-grid{grid-template-columns:1fr}
     .fields-grid.triple{grid-template-columns:1fr 1fr!important}
@@ -126,6 +139,12 @@
     <div class="result-item"><div class="result-label">Base Damage</div><div class="result-value base" id="baseDmg">0</div></div>
     <div class="result-item"><div class="result-label">Modified Damage</div><div class="result-value modified" id="modDmg">0</div></div>
     <div class="result-item"><div class="result-label">Change</div><div class="result-value change neutral" id="changePct">0.00%</div></div>
+  </div>
+  <div class="loadout-panel">
+    <div class="tabs" id="tabs"></div>
+    <input id="loadoutName" class="name-input" placeholder="Loadout name" oninput="renameActiveLoadout(this.value)">
+    <button class="utility-btn" onclick="addLoadout()">+ Tab</button>
+    <button class="utility-btn" onclick="duplicateLoadout()">Duplicate</button>
   </div>
   <div class="header-actions" style="margin-bottom:1.5rem">
     <button class="reset-btn" onclick="resetAll()">Reset All Increases</button>
@@ -312,6 +331,16 @@
     <div class="note-text">Ranked by lowest required stat gain for +1% damage.</div>
   </div>
   </div>
+  <details class="share-panel">
+    <summary>Build share + increase screenshot block</summary>
+    <div class="code-row">
+      <input id="buildCode" readonly>
+      <button class="utility-btn" onclick="copyBuildCode()">Copy code</button>
+      <button class="utility-btn" onclick="importBuildCode()">Paste/import code</button>
+    </div>
+    <div id="increaseSummary"></div>
+  </details>
+
 </div>
 <script>
 let shieldBreakActive=false;
@@ -319,6 +348,8 @@ let resonanceActive=false;
 let useBATK=false;
 let bucket10Open=false;
 let efficiencySortMode='raw';
+let loadouts=[];
+let activeLoadoutId=null;
 function toggleShield(){shieldBreakActive=!shieldBreakActive;document.getElementById('shieldToggle').classList.toggle('active',shieldBreakActive);saveAll();calc()}
 function toggleResonance(){resonanceActive=!resonanceActive;document.getElementById('resonanceToggle').classList.toggle('active',resonanceActive);saveAll();calc()}
 function toggleAtkType(){useBATK=!useBATK;document.getElementById('atkTypeToggle').classList.toggle('active',useBATK);document.getElementById('atkTypeToggleLabel').textContent=useBATK?'Using: BATK DMG%':'Using: Skill DMG%';document.getElementById('atkTypeLabel').textContent=useBATK?'BATK DMG%':'Skill DMG%';saveAll();calc()}
@@ -511,7 +542,7 @@ document.getElementById('modDmg').textContent=fmt(modDmg);
 const changePct=baseDmg>0?((modDmg/baseDmg-1)*100):0;
 const changeEl=document.getElementById('changePct');
 if(Math.abs(changePct)<0.005){changeEl.textContent='0.00%';changeEl.className='result-value change neutral'}else{changeEl.textContent=(changePct>0?'+':'')+changePct.toFixed(2)+'%';changeEl.className='result-value change '+(changePct>0?'positive':'negative')}
-renderEfficiencyGuide(baseDmg)}
+renderEfficiencyGuide(baseDmg);refreshShare()}
 
 function reversePATK(){
   const totalPATK=parseFloat(document.getElementById('totalpatk_base').value)||0;
@@ -532,26 +563,25 @@ function resetAll(){document.querySelectorAll('.increase-input').forEach(el=>{el
 function resetEverything(){document.querySelectorAll('input[type="number"]').forEach(el=>{el.value=''});shieldBreakActive=false;resonanceActive=false;useBATK=false;document.getElementById('shieldToggle').classList.remove('active');document.getElementById('resonanceToggle').classList.remove('active');document.getElementById('atkTypeToggle').classList.remove('active');document.getElementById('atkTypeToggleLabel').textContent='Using: Skill DMG%';document.getElementById('atkTypeLabel').textContent='Skill DMG%';saveAll();calc()}
 
 // localStorage persistence
-const STORAGE_KEY='coa_calc_v1';
-function saveAll(){
-const data={};
-document.querySelectorAll('input[type="number"]').forEach(el=>{if(el.value!=='')data[el.id]=el.value});
-data._shieldBreak=shieldBreakActive;
-data._resonance=resonanceActive;
-data._useBATK=useBATK;
-try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data))}catch(e){}
-}
-function loadAll(){
-try{
-const raw=localStorage.getItem(STORAGE_KEY);
-if(!raw)return;
-const data=JSON.parse(raw);
-document.querySelectorAll('input[type="number"]').forEach(el=>{if(data[el.id]!==undefined)el.value=data[el.id]});
-if(data._shieldBreak){shieldBreakActive=true;document.getElementById('shieldToggle').classList.add('active')}
-if(data._resonance){resonanceActive=true;document.getElementById('resonanceToggle').classList.add('active')}
-if(data._useBATK){useBATK=true;document.getElementById('atkTypeToggle').classList.add('active');document.getElementById('atkTypeToggleLabel').textContent='Using: BATK DMG%';document.getElementById('atkTypeLabel').textContent='BATK DMG%'}
-}catch(e){}
-}
+const STORAGE_KEY='coa_calc_v2';
+const BASE_IDS=Array.from(document.querySelectorAll('input[id$="_base"]')).map(el=>el.id);
+const INC_IDS=Array.from(document.querySelectorAll('input[id$="_inc"]')).map(el=>el.id);
+
+function captureCurrent(){const values={};document.querySelectorAll('input[type="number"]').forEach(el=>values[el.id]=el.value);return{values,toggles:{shieldBreakActive,resonanceActive,useBATK}}}
+function applyLoadoutData(data){document.querySelectorAll('input[type="number"]').forEach(el=>{el.value=(data.values&&data.values[el.id])||''});shieldBreakActive=!!data.toggles?.shieldBreakActive;resonanceActive=!!data.toggles?.resonanceActive;useBATK=!!data.toggles?.useBATK;document.getElementById('shieldToggle').classList.toggle('active',shieldBreakActive);document.getElementById('resonanceToggle').classList.toggle('active',resonanceActive);document.getElementById('atkTypeToggle').classList.toggle('active',useBATK);document.getElementById('atkTypeToggleLabel').textContent=useBATK?'Using: BATK DMG%':'Using: Skill DMG%';document.getElementById('atkTypeLabel').textContent=useBATK?'BATK DMG%':'Skill DMG%';}
+function activeLoadout(){return loadouts.find(l=>l.id===activeLoadoutId)}
+function persistActive(){const l=activeLoadout();if(!l)return;l.data=captureCurrent();}
+function renderTabs(){const tabs=document.getElementById('tabs');tabs.innerHTML=loadouts.map(l=>`<button class="tab-btn ${l.id===activeLoadoutId?'active':''}" onclick="switchLoadout('${l.id}')">${l.name}</button>`).join('');document.getElementById('loadoutName').value=activeLoadout()?.name||'';}
+function switchLoadout(id){persistActive();activeLoadoutId=id;applyLoadoutData(activeLoadout().data);renderTabs();calc();}
+function addLoadout(){persistActive();const id='l'+Date.now();loadouts.push({id,name:'Loadout '+(loadouts.length+1),data:captureCurrent()});activeLoadoutId=id;renderTabs();saveAll();}
+function duplicateLoadout(){persistActive();const src=activeLoadout();const id='l'+Date.now();loadouts.push({id,name:src.name+' Copy',data:JSON.parse(JSON.stringify(src.data))});activeLoadoutId=id;renderTabs();saveAll();}
+function renameActiveLoadout(name){const l=activeLoadout();if(!l)return;l.name=name||'Unnamed';renderTabs();saveAll();}
+function makeBuildCode(){const l=activeLoadout();if(!l)return'';const base={name:l.name,bases:{},toggles:l.data.toggles};BASE_IDS.forEach(id=>base.bases[id]=l.data.values[id]||'');return btoa(unescape(encodeURIComponent(JSON.stringify(base))));}
+function refreshShare(){document.getElementById('buildCode').value=makeBuildCode();const lines=['Build: '+(activeLoadout()?.name||'—'),'--- Increases breakdown ---'];INC_IDS.forEach(id=>{const val=v(id);if(val!==0)lines.push(`${id.replace('_inc','')}: +${val}`)});if(lines.length===2)lines.push('No increases set.');document.getElementById('increaseSummary').textContent=lines.join('\n');}
+function copyBuildCode(){refreshShare();navigator.clipboard?.writeText(document.getElementById('buildCode').value)}
+function importBuildCode(){const raw=prompt('Paste build code');if(!raw)return;try{const obj=JSON.parse(decodeURIComponent(escape(atob(raw.trim()))));if(!obj.bases)return;BASE_IDS.forEach(id=>{document.getElementById(id).value=obj.bases[id]??''});if(obj.toggles){shieldBreakActive=!!obj.toggles.shieldBreakActive;resonanceActive=!!obj.toggles.resonanceActive;useBATK=!!obj.toggles.useBATK;}persistActive();calc();}catch(e){alert('Invalid build code')}}
+function saveAll(){persistActive();try{localStorage.setItem(STORAGE_KEY,JSON.stringify({loadouts,activeLoadoutId}))}catch(e){}}
+function loadAll(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const d=JSON.parse(raw);if(Array.isArray(d.loadouts)&&d.loadouts.length){loadouts=d.loadouts;activeLoadoutId=d.activeLoadoutId||d.loadouts[0].id;applyLoadoutData(activeLoadout().data);renderTabs();return;}}}catch(e){}loadouts=[{id:'l1',name:'Loadout 1',data:captureCurrent()}];activeLoadoutId='l1';renderTabs();}
 // Hook save into every input change
 document.querySelectorAll('input[type="number"]').forEach(el=>{el.addEventListener('input',saveAll)});
 // Load saved data then calculate
