@@ -21,6 +21,8 @@
   .result-value.base{color:var(--text-secondary)}.result-value.modified{color:var(--accent-cyan)}.result-value.change{font-size:1.1rem}.result-value.change.positive{color:var(--positive)}.result-value.change.negative{color:var(--negative)}.result-value.change.neutral{color:var(--text-muted)}
   .bucket-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;min-width:0}
   .bucket-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;transition:border-color .2s;min-width:0;overflow:hidden}
+  .bucket-card.bottom-bind{display:flex;flex-direction:column}
+  .bucket-card.bottom-bind .bucket-result{margin-top:auto}
   .bucket-card:hover{border-color:rgba(59,130,246,.3)}.bucket-card.full-width{grid-column:1/-1}
   .bucket-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
   .bucket-number{width:22px;height:22px;border-radius:5px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;color:var(--accent-blue);flex-shrink:0}
@@ -214,7 +216,7 @@
     </div>
 
     <!-- 7 DMG Bonus -->
-    <div class="bucket-card">
+    <div class="bucket-card bottom-bind">
       <div class="bucket-header"><div class="bucket-number">7</div><div class="bucket-title">DMG Bonus</div></div>
       <div class="bucket-formula">= 1 + DMG Bonus%</div>
       <div class="fields-grid">
@@ -243,7 +245,7 @@
     </div>
 
     <!-- 9 Debuff/Type/Boss -->
-    <div class="bucket-card">
+    <div class="bucket-card bottom-bind">
       <div class="bucket-header"><div class="bucket-number">9</div><div class="bucket-title">Debuff / Type / Boss DMG</div></div>
       <div class="bucket-formula">= 1 + Boss% + Type% + all Debuff DMG% + Shield Break DMG%</div>
       <div class="fields-grid">
@@ -394,15 +396,11 @@ function renderEfficiencyGuide(baseTotal){
     for(let i=0;i<30;i++){
       const tmp={...state};
       if(row.bucket==='8'){
+        // Bucket 8 sources are additive with equal weight; model as +X to one representative source.
         tmp[useBATK?'batkdmg':'skilldmg']+=hi;
-        tmp.aerialdmg+=hi;
-        tmp.specialdmg+=hi;
-        if(resonanceActive) tmp.resdmg+=hi;
       }else if(row.bucket==='9'){
+        // Bucket 9 sources are additive with equal weight; model as +X to one representative source.
         tmp.bossdmg+=hi;
-        tmp.typedmg+=hi;
-        tmp.debuffdmg+=hi;
-        if(shieldBreakActive) tmp.shieldbreak+=hi;
       }else{
         tmp[row.key]+=hi;
       }
@@ -416,14 +414,8 @@ function renderEfficiencyGuide(baseTotal){
       const tmp={...state};
       if(row.bucket==='8'){
         tmp[useBATK?'batkdmg':'skilldmg']+=mid;
-        tmp.aerialdmg+=mid;
-        tmp.specialdmg+=mid;
-        if(resonanceActive) tmp.resdmg+=mid;
       }else if(row.bucket==='9'){
         tmp.bossdmg+=mid;
-        tmp.typedmg+=mid;
-        tmp.debuffdmg+=mid;
-        if(shieldBreakActive) tmp.shieldbreak+=mid;
       }else{
         tmp[row.key]+=mid;
       }
