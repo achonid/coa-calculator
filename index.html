@@ -389,7 +389,8 @@ function renderEfficiencyGuide(baseTotal){
     {bucket:'7',label:'DMG Bonus%',key:'dmgbonus',unit:'% point'},
     {bucket:'8',label:useBATK?'BATK/Aerial/Special/Resonance DMG% (grouped)':'Skill/Aerial/Special/Resonance DMG% (grouped)',key:useBATK?'batkdmg':'skilldmg',unit:'% point'},
     {bucket:'9',label:'Boss/Type/Debuff/Shield Break DMG% (grouped)',key:'bossdmg',unit:'% point'},
-    {bucket:'10',label:'Additional DMG%',key:'additionaldmg',unit:'% point'}
+    {bucket:'10',label:'DEF/Ele RES/DMG Resist Reduction (grouped)',key:'defred',unit:'% point'},
+    {bucket:'11',label:'Additional DMG%',key:'additionaldmg',unit:'% point'}
   ];
 
   const results=[];
@@ -404,6 +405,10 @@ function renderEfficiencyGuide(baseTotal){
       }else if(row.bucket==='9'){
         // Bucket 9 sources are additive with equal weight; model as +X to one representative source.
         tmp.bossdmg+=hi;
+      }else if(row.bucket==='10'){
+        tmp.defred+=hi;
+        tmp.dmgresred+=hi;
+        tmp.eresred+=hi*2.2;
       }else{
         tmp[row.key]+=hi;
       }
@@ -419,6 +424,10 @@ function renderEfficiencyGuide(baseTotal){
         tmp[useBATK?'batkdmg':'skilldmg']+=mid;
       }else if(row.bucket==='9'){
         tmp.bossdmg+=mid;
+      }else if(row.bucket==='10'){
+        tmp.defred+=mid;
+        tmp.dmgresred+=mid;
+        tmp.eresred+=mid*2.2;
       }else{
         tmp[row.key]+=mid;
       }
@@ -428,7 +437,14 @@ function renderEfficiencyGuide(baseTotal){
   }
 
   results.forEach(r=>{
-    r.relative=r.current>0?(r.needed/r.current):Infinity;
+    const groupedCurrent=(r.bucket==='8')
+      ? (useBATK?state.batkdmg:state.skilldmg)+state.aerialdmg+state.specialdmg+(resonanceActive?state.resdmg:0)
+      : (r.bucket==='9')
+        ? state.bossdmg+state.typedmg+state.debuffdmg+(shieldBreakActive?state.shieldbreak:0)
+        : (r.bucket==='10')
+          ? state.defred+state.dmgresred+(state.eresred/2.2)
+          : r.current;
+    r.relative=groupedCurrent>0?(r.needed/groupedCurrent):Infinity;
     // For raw sorting, ENH is ranked by its effective % contribution scale (÷2.2), while still displaying flat need.
     r.rawSortValue=(r.key==='eleENH')?(r.needed/2.2):r.needed;
   });
