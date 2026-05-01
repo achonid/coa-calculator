@@ -1,0 +1,9 @@
+commit 564330807674251fc00b9bdd42f519c97e8dce43
+Author: Codex <codex@openai.com>
+Date:   Fri May 1 13:59:47 2026 +0000
+
+    Fix duplicate loadout naming length and overview labels
+
+ coa-calculator-final.html | 4 ++--
+ index.html                | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
